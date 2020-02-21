@@ -1,0 +1,6 @@
+## Interface: 11303
+## Title: IntensityEPGP
+## Author: VictoriousArugal
+## SavedVariables: loot_history, players_cdb
+## Version: 1.0
+main.lua
