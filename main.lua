@@ -1,3 +1,8 @@
+DEFAULT_AUCTION_DURATION = 20;
+MIN_AUCTION_DURATION = 15;
+MAX_AUCTION_DURATION = 60;
+DEFAULT_LOOT_CONTROLLER_RANK = 1; -- Top two ranks. 0=GM, 1=Officer etc
+
 local epgp = CreateFrame("Frame")
 epgp:RegisterEvent("CHAT_MSG_RAID")
 epgp:RegisterEvent("CHAT_MSG_RAID_LEADER")
@@ -7,20 +12,31 @@ epgp:SetScript("OnEvent", function(self, event, message, sender, ...)
   command = strlower(command)
   if command == "!bid" then do_bid(arguments, sender)
   elseif command == "!open" then open_bids(arguments, sender)
-  elseif command == "!bis" then epgp_unknown_command(arguments, sender)
-  elseif command == "!help" then epgp_help_command(arguments, sender)
+  elseif command == "!bis" then epgp_unknown_command(sender)
+  elseif command == "!help" then epgp_help_command(sender)
   elseif command == "!close" then close_bids(sender)
   end
 end)
 
 function can_bid(name)
+  -- function: can_bid
+  -- @name,string - Player name
+  -- @return,boolean
+  -- Returns true if the player has the correct permissions to bid on items in a raid.
+  --   Placeholder function. Has been implemented where necessary.
   return true;
 end
 
 function is_lootmaster(name)
+  -- function: is_lootmaster
+  -- @name,string - Player name
+  -- @return,boolean
+  -- Returns true if the player has the correct permissions to control loot in a raid.
+  --   This is decided by their rank in the guild, usually the ranks at or above 
+  --   DEFAULT_LOOT_CONTROLLER_RANK, then they have permission.
   for i=1,GetNumGuildMembers() do
-    guildname,rank,rankIndex=GetGuildRosterInfo(i);
-    if guildname==name and rankIndex <= 1 then
+    local guildname, rank, rankIndex=GetGuildRosterInfo(i);
+    if guildname==name and rankIndex <= DEFAULT_LOOT_CONTROLLER_RANK then
       return true;
     end
   end
@@ -28,11 +44,17 @@ function is_lootmaster(name)
   return false;
 end
 
-function epgp_unknown_command(arguments, player)
+function epgp_unknown_command(player)
+  -- function: epgp_unknown_command
+  -- @player,string - The player who sent the command
+  -- Messages an error to the sender about the invalid command.
   SendChatMessage("iEPGP: Unknown command. Type !bid ms, !bid os, or !bid cancel.", "WHISPER", nil, player)
 end
 
-function epgp_help_command(arguments, player)
+function epgp_help_command(player)
+  -- function: epgp_help_command
+  -- @player,string - The player who requested the help command
+  -- Messages help information to the requestee.
   SendChatMessage("iEPGP: After bidding has opened (look for the raid warning), type !bid ms (for main spec), !bid os (for off spec), or !bid cancel (to retract bids).", "WHISPER", nil, player)
 end
 
@@ -42,53 +64,53 @@ function open_bids(gp_string, player)
   end
 
   if bid_item ~= nil then
-    SendChatMessage("iEPGP: Bids not opened, close previous item first.", "RAID")
+    SendChatMessage("iEPGP: Bids not opened, close previous item first.", "RAID");
     return;
   end
 
-  gp_item, gp_amount, gp_count, gp_duration = strsplit("--", gp_string)
+  local auction_item, auction_cost, auction_quantity, auction_duration = strsplit("--", gp_string);
 
-  local gp_item_name, gp_item_link = GetItemInfo(gp_item)
-  if gp_item_name == nil then
-    SendChatMessage("iEPGP: Bids not opened, invalid item.", "RAID")
+  local auction_item_name, auction_item_link = GetItemInfo(auction_item);
+  if auction_item_name == nil then
+    SendChatMessage("iEPGP: Bids not opened, invalid item.", "RAID");
     return;
   end
 
-  gp_amount = tonumber(gp_amount)
-  gp_count = tonumber(gp_count)
-  gp_duration = tonumber(gp_duration)
+  auction_cost = tonumber(auction_cost);
+  auction_quantity = tonumber(auction_quantity);
+  auction_duration = tonumber(auction_duration);
 
-  if gp_duration == nil then
-    gp_duration = 20
-  elseif gp_duration < 15 then
-    gp_duration = 15;
-  elseif gp_duration > 60 then
-    gp_duration = 60;
+  if auction_duration == nil then
+    auction_duration = DEFAULT_AUCTION_DURATION;
+  elseif auction_duration < MIN_AUCTION_DURATION then
+    auction_duration = MIN_AUCTION_DURATION;
+  elseif auction_duration > MAX_AUCTION_DURATION then
+    auction_duration = MAX_AUCTION_DURATION;
   end
 
-  if gp_count == nil then
-    gp_count = 1;
+  if auction_quantity == nil then
+    auction_quantity = 1;
   end
 
-  bid_item = gp_item_link;
+  bid_item = auction_item_link;
 
-  if gp_amount ~= nil then
-    SendChatMessage("iEPGP: "..gp_item_link.." (GP: " .. gp_amount .. ") open for bidding (closing in ".. gp_duration .. " seconds)! Commands: \"!bid ms\", \"!bid os\"", "RAID_WARNING");
+  if auction_cost ~= nil then
+    SendChatMessage("iEPGP: "..auction_item_link.." (GP: " .. auction_cost .. ") open for bidding (closing in ".. auction_duration .. " seconds)! Commands: \"!bid ms\", \"!bid os\"", "RAID_WARNING");
   else
-    gp_amount = "N/A"
-    SendChatMessage("iEPGP: "..gp_item_link.." open for bidding (closing in ".. gp_duration .. " seconds)! Commands: \"!bid ms\", \"!bid os\"", "RAID_WARNING");
+    auction_cost = "N/A"
+    SendChatMessage("iEPGP: "..auction_item_link.." open for bidding (closing in ".. auction_duration .. " seconds)! Commands: \"!bid ms\", \"!bid os\"", "RAID_WARNING");
   end
 
   -- Eventually deprecate this, support particular types of messages
-  C_ChatInfo.SendAddonMessage("iEPGP", gp_item_link .. "\t" .. gp_amount .. "\t" .. gp_count .. "\t" .. gp_duration, "RAID")
+  C_ChatInfo.SendAddonMessage("iEPGP", auction_item_link .. "\t" .. auction_cost .. "\t" .. auction_quantity .. "\t" .. auction_duration, "RAID")
   -- This should be what needs to be used
-  -- C_ChatInfo.SendAddonMessage("iEPGP", "open\t" .. gp_item_link .. "\t" .. gp_amount .. "\t" .. gp_count .. "\t" .. gp_duration, "RAID")
+  -- C_ChatInfo.SendAddonMessage("iEPGP", "open\t" .. auction_item_link .. "\t" .. auction_cost .. "\t" .. auction_quantity .. "\t" .. auction_duration, "RAID")
 
-  iepgp_a4 = C_Timer.NewTimer(gp_duration - 10, alert4)
-  iepgp_a3 = C_Timer.NewTimer(gp_duration - 3, alert3)
-  iepgp_a2 = C_Timer.NewTimer(gp_duration - 2, alert2)
-  iepgp_a1 = C_Timer.NewTimer(gp_duration - 1, alert1)
-  iepgp_a0 = C_Timer.NewTimer(gp_duration, end_bids)
+  iepgp_a4 = C_Timer.NewTimer(auction_duration - 10, alert4)
+  iepgp_a3 = C_Timer.NewTimer(auction_duration - 3, alert3)
+  iepgp_a2 = C_Timer.NewTimer(auction_duration - 2, alert2)
+  iepgp_a1 = C_Timer.NewTimer(auction_duration - 1, alert1)
+  iepgp_a0 = C_Timer.NewTimer(auction_duration, end_bids)
 end
 
 function alert4()
@@ -108,8 +130,6 @@ function alert1()
 end
 
 function terminate_alert_timers()
-  print(Terminating)
-  print(iepgp_a4)
   if iepgp_a4 ~= nil then iepgp_a4:Cancel() end
   if iepgp_a3 ~= nil then iepgp_a3:Cancel() end
   if iepgp_a2 ~= nil then iepgp_a2:Cancel() end
@@ -132,11 +152,12 @@ function close_bids(player)
 end
 
 function end_bids()
-  ms_bidders_text = ""
-  os_bidders_text = ""
+  local ms_bidders_text = ""
+  local os_bidders_text = ""
+
   for i=1,getn(ms_bidders) do
     local name = ms_bidders[i];
-    if strlen(ms_bidders_text)>0 then
+    if strlen(ms_bidders_text) > 0 then
       ms_bidders_text = ms_bidders_text .. ", " .. name;
     else
       ms_bidders_text = name;
@@ -145,7 +166,7 @@ function end_bids()
 
   for i=1,getn(os_bidders) do
     local name = os_bidders[i];
-    if strlen(os_bidders_text)>0 then
+    if strlen(os_bidders_text) > 0 then
       os_bidders_text = os_bidders_text .. ", " .. name;
     else
       os_bidders_text = name;
@@ -168,7 +189,7 @@ function end_bids()
 end
 
 function cancel_bid(bidders, gpPlayer)
-  cleaned = false;
+  local cleaned = false;
   if tContains(bidders, gpPlayer) then
     for i=1,getn(bidders) do
       if bidders[i] == gpPlayer then
