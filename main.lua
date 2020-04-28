@@ -2,6 +2,12 @@ DEFAULT_AUCTION_DURATION = 20;
 MIN_AUCTION_DURATION = 15;
 MAX_AUCTION_DURATION = 60;
 DEFAULT_LOOT_CONTROLLER_RANK = 1; -- Top two ranks. 0=GM, 1=Officer etc
+ADDON_API_VERSION = "1.1";
+AUCTION_SPLIT_DELIMETER = "\t\t\t\t\t\t"
+
+bid_item = nil;
+ms_bidders = {};
+os_bidders = {};
 
 local epgp = CreateFrame("Frame")
 epgp:RegisterEvent("CHAT_MSG_RAID")
@@ -63,12 +69,20 @@ function open_bids(gp_string, player)
     return;
   end
 
+  local auction_item, auction_cost, auction_quantity, auction_duration = strsplit(AUCTION_SPLIT_DELIMETER, gp_string);
+  auction_string = gp_string;
+
+  local item = Item:CreateFromItemLink(auction_item)
+  item:ContinueOnItemLoad(start_auction)
+end
+
+function start_auction()
   if bid_item ~= nil then
     SendChatMessage("iEPGP: Bids not opened, close previous item first.", "RAID");
     return;
   end
 
-  local auction_item, auction_cost, auction_quantity, auction_duration = strsplit("--", gp_string);
+  local auction_item, auction_cost, auction_quantity, auction_duration = strsplit(AUCTION_SPLIT_DELIMETER, auction_string);
 
   local auction_item_name, auction_item_link = GetItemInfo(auction_item);
   if auction_item_name == nil then
@@ -101,32 +115,15 @@ function open_bids(gp_string, player)
     SendChatMessage("iEPGP: "..auction_item_link.." open for bidding (closing in ".. auction_duration .. " seconds)! Commands: \"!bid ms\", \"!bid os\"", "RAID_WARNING");
   end
 
-  -- Eventually deprecate this, support particular types of messages
-  C_ChatInfo.SendAddonMessage("iEPGP", auction_item_link .. "\t" .. auction_cost .. "\t" .. auction_quantity .. "\t" .. auction_duration, "RAID")
-  -- This should be what needs to be used
-  -- C_ChatInfo.SendAddonMessage("iEPGP", "open\t" .. auction_item_link .. "\t" .. auction_cost .. "\t" .. auction_quantity .. "\t" .. auction_duration, "RAID")
+  C_ChatInfo.SendAddonMessage("iEPGP", ADDON_API_VERSION .. "\t" .. "open\t" .. auction_item_link .. "\t" .. auction_cost .. "\t" .. auction_quantity .. "\t" .. auction_duration, "RAID")
 
-  iepgp_a4 = C_Timer.NewTimer(auction_duration - 10, alert4)
-  iepgp_a3 = C_Timer.NewTimer(auction_duration - 3, alert3)
-  iepgp_a2 = C_Timer.NewTimer(auction_duration - 2, alert2)
-  iepgp_a1 = C_Timer.NewTimer(auction_duration - 1, alert1)
+  iepgp_a4 = C_Timer.NewTimer(auction_duration - 10, function() SendChatMessage("iEPGP: "..bid_item.." bids closing in 10 seconds!", "RAID_WARNING") end)
+  iepgp_a3 = C_Timer.NewTimer(auction_duration - 3, function() SendChatMessage("iEPGP: Closing in 3", "RAID") end)
+  iepgp_a2 = C_Timer.NewTimer(auction_duration - 2, function() SendChatMessage("iEPGP: Closing in 2", "RAID") end)
+  iepgp_a1 = C_Timer.NewTimer(auction_duration - 1, function() SendChatMessage("iEPGP: Closing in 1", "RAID") end)
   iepgp_a0 = C_Timer.NewTimer(auction_duration, end_bids)
-end
-
-function alert4()
-  SendChatMessage("iEPGP: "..bid_item.." bids closing in 10 seconds!", "RAID_WARNING");
-end
-
-function alert3()
-  SendChatMessage("iEPGP: Closing in 3", "RAID");
-end
-
-function alert2()
-  SendChatMessage("iEPGP: Closing in 2", "RAID");
-end
-
-function alert1()
-  SendChatMessage("iEPGP: Closing in 1", "RAID");
+  
+  auction_string = nil;
 end
 
 function terminate_alert_timers()
@@ -181,7 +178,7 @@ function end_bids()
     SendChatMessage("iEPGP: No bids for "..bid_item..".", "RAID");
   end
 
-  -- C_ChatInfo.SendAddonMessage("iEPGP", "close\t", "RAID")
+  C_ChatInfo.SendAddonMessage("iEPGP", ADDON_API_VERSION .. "\t" .. "close", "RAID")
   SendChatMessage("iEPGP: Bids closed for "..bid_item, "RAID")
   bid_item = nil;
   ms_bidders = {};
@@ -252,7 +249,3 @@ function do_bid(spec, gpPlayer)
     return;
   end
 end
-
-bid_item = nil;
-ms_bidders = {};
-os_bidders = {};
