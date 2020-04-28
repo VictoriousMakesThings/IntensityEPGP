@@ -219,14 +219,24 @@ function do_bid(spec, gpPlayer)
     if tContains(ms_bidders, gpPlayer) then
       SendChatMessage("iEPGP: You've already bid main spec on "..bid_item..".", "WHISPER", nil, gpPlayer)
     else
-      SendChatMessage("iEPGP: Main spec bid accepted for "..bid_item..".", "WHISPER", nil, gpPlayer)
+      local cleaned, os_bidders = cancel_bid(os_bidders, gpPlayer);
+      if cleaned then
+        SendChatMessage("iEPGP: Your bid has been updated to main spec for "..bid_item..".", "WHISPER", nil, gpPlayer)
+      else
+        SendChatMessage("iEPGP: Main spec bid accepted for "..bid_item..".", "WHISPER", nil, gpPlayer)
+      end
       tinsert(ms_bidders, gpPlayer)
     end
   elseif spec == "os" or spec == "off" or spec == "offspec" then
     if tContains(os_bidders, gpPlayer) then
       SendChatMessage("iEPGP: You've already bid off spec on "..bid_item..".", "WHISPER", nil, gpPlayer)
     else
-      SendChatMessage("iEPGP: Off spec bid accepted for "..bid_item..".", "WHISPER", nil, gpPlayer)
+      local cleaned, ms_bidders = cancel_bid(ms_bidders, gpPlayer);
+      if cleaned then
+        SendChatMessage("iEPGP: Your bid has been updated to off spec for "..bid_item..".", "WHISPER", nil, gpPlayer)
+      else
+        SendChatMessage("iEPGP: Off spec bid accepted for "..bid_item..".", "WHISPER", nil, gpPlayer)
+      end
       tinsert(os_bidders, gpPlayer)
     end
   elseif spec == "cancel" then
