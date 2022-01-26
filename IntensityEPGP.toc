@@ -1,6 +1,6 @@
-## Interface: 11306
+## Interface: 20503
 ## Title: IntensityEPGP
 ## Author: VictoriousArugal
 ## SavedVariables: 
-## Version: 1.01
+## Version: 1.1
 main.lua
