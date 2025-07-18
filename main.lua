@@ -27,35 +27,6 @@ epgp:SetScript("OnEvent", function(self, event, message, sender, ...)
   end
 end)
 
-function create_dumpframe(text)
-  local s = CreateFrame("ScrollFrame", nil, UIParent, "UIPanelScrollFrameTemplate")
-  s:SetSize(300,200)
-  s:SetPoint("CENTER")
-  s:SetBackdrop({bgFile = "Interface/Tooltips/UI-Tooltip-Background", tile = true, tileSize = 16, insets = {left = 0, right = 0, top = 0, bottom = 0},})
-  s:SetBackdropColor(0, 0, 0)
-  local e = CreateFrame("EditBox", nil, s)
-  e:SetMultiLine(true)
-  e:SetFontObject(ChatFontNormal)
-  e:SetWidth(300)
-  s:SetScrollChild(e)
-
-  e:SetText(text)
-  e:HighlightText()
-
-  e:SetScript("OnEscapePressed", function()
-    s:Hide()
-  end)
-
-  --local b = CreateFrame("Button", "MyButton", s, "UIPanelButtonTemplate")
-  --b:SetSize(80 ,22) -- width, height
-  --b:SetText("Close")
-  --b:SetPoint("CENTER")
-  --b:SetScript("OnClick", function()
-  --  s:Hide()
-  --  b:Hide()
-  --end)
-end
-
 function can_bid(name)
   -- function: can_bid
   -- @name,string - Player name
